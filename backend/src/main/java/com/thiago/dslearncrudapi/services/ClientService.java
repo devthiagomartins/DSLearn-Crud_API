@@ -1,6 +1,9 @@
 package com.thiago.dslearncrudapi.services;
 
+import javax.persistence.EntityNotFoundException;
+
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.dao.EmptyResultDataAccessException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
@@ -9,6 +12,7 @@ import org.springframework.transaction.annotation.Transactional;
 import com.thiago.dslearncrudapi.dto.ClientDTO;
 import com.thiago.dslearncrudapi.entities.Client;
 import com.thiago.dslearncrudapi.repositories.ClientRepository;
+import com.thiago.dslearncrudapi.services.exceptions.ResourceNotFoundException;
 
 @Service
 public class ClientService {
@@ -18,7 +22,7 @@ public class ClientService {
 
 	@Transactional(readOnly = true)
 	public ClientDTO findById(Long id) {
-		return new ClientDTO(clientRepository.findById(id).get());
+		return new ClientDTO(clientRepository.findById(id).orElseThrow(() -> new ResourceNotFoundException("Id not found "+ id)));
 	}
 
 	@Transactional(readOnly = true)
@@ -37,15 +41,25 @@ public class ClientService {
 
 
 	public void deleteById(Long id) {
-		clientRepository.deleteById(id);
+		try {
+			clientRepository.deleteById(id);
+		} catch (EmptyResultDataAccessException e) {
+			throw new ResourceNotFoundException("Id not found "+ id);
+		}
 	}
 
 	@Transactional
 	public ClientDTO update(Long id, ClientDTO dto) {
-		Client client = clientRepository.getOne(id);
-		convertDtoToEntity(dto, client);
-		client = clientRepository.save(client);
-		return new ClientDTO(client);
+		
+		try {
+			Client client = clientRepository.getOne(id);
+			convertDtoToEntity(dto, client);
+			client = clientRepository.save(client);
+			return new ClientDTO(client);
+		} catch (EntityNotFoundException e) {
+			throw new ResourceNotFoundException("Id not found "+ id);
+		}
+		
 	}
 	
 	
